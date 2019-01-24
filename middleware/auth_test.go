@@ -1,7 +1,8 @@
-package middleware
+package middleware_test
 
 import (
-	"goapi/handlers"
+	"goapi/helpers"
+	"goapi/middleware"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +20,7 @@ func TestBadAuthorizationHeaderReturnsUnauthorized(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	r := mux.NewRouter()
-	r.Use(AuthRequiredMiddleware("securitykey"))
+	r.Use(middleware.AuthRequiredMiddleware("securitykey"))
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {})
 
 	r.ServeHTTP(rr, req)
@@ -54,12 +55,12 @@ func TestGoodAuthorizationHeaderCallsHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	r := mux.NewRouter()
-	r.Use(AuthRequiredMiddleware(securityKey))
+	r.Use(middleware.AuthRequiredMiddleware(securityKey))
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
-	claims := handlers.AppClaims{
+	claims := helpers.AppClaims{
 		Username: "johndoe123",
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(15000).Unix(),

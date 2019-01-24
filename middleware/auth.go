@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"goapi/handlers"
+	"goapi/helpers"
 	"net/http"
 	"strings"
 
@@ -30,7 +30,7 @@ func AuthRequiredMiddleware(secretKey string) mux.MiddlewareFunc {
 				return
 			}
 
-			token, _ := jwt.ParseWithClaims(tokenString, &handlers.AppClaims{}, func(token *jwt.Token) (interface{}, error) {
+			token, _ := jwt.ParseWithClaims(tokenString, &helpers.AppClaims{}, func(token *jwt.Token) (interface{}, error) {
 				return []byte(secretKey), nil
 			})
 
@@ -39,7 +39,7 @@ func AuthRequiredMiddleware(secretKey string) mux.MiddlewareFunc {
 				return
 			}
 
-			if claims, ok := token.Claims.(*handlers.AppClaims); ok {
+			if claims, ok := token.Claims.(*helpers.AppClaims); ok {
 				context.Set(req, "username", claims.Username)
 				next.ServeHTTP(w, req)
 				return

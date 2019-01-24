@@ -9,12 +9,13 @@ import (
 
 var db *sql.DB
 
-// IDataStore defines the methods to retrieve data from the database
-type IDataStore interface {
-	GetUserByUsername(username string) (user User, err error)
+// DataAccessor defines the methods to retrieve data
+type DataAccessor interface {
+	UserDataReader
+	PostDataReader
 }
 
-// DB wraps the database object and will implement the interface IDataStore
+// DB wraps the database object and will implement the interface DataAccessor
 type DB struct {
 	*sql.DB
 }
@@ -25,8 +26,10 @@ func NewDB(dataSourceName string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if err = db.Ping(); err != nil {
 		return nil, err
 	}
+
 	return &DB{db}, nil
 }

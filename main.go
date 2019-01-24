@@ -1,44 +1,64 @@
 package main
 
 import (
+	"goapi/handlers"
+	"goapi/helpers"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
-	"goapi/handlers"
 	"goapi/middleware"
 	"goapi/models"
 
 	"github.com/gorilla/mux"
 )
 
-func main() {
-	dsn, noDsn := os.LookupEnv("GOAPI_DSN")
-	if noDsn == false {
-		log.Fatal("Environment variable GOAPI_DSN must be set.")
-	}
+var (
+	db          *models.DB
+	signingKey  string
+	emailSender helpers.EmailSender
+)
 
-	db, err := models.NewDB(dsn)
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
+	signingKey = helpers.GetEnvVar("GOAPI_SIGNING_KEY")
+	dsn := helpers.GetEnvVar("GOAPI_DSN")
+
+	var err error
+	db, err = models.NewDB(dsn)
 	if err != nil {
 		log.Fatal("Unable to connect with the given DSN.")
 	}
 
-	env := handlers.Env{DB: db}
+	emailSender = helpers.NewEmailSender(helpers.EmailServerConfigurer{
+		EmailHost:     helpers.GetEnvVar("GOAPI_EMAIL_HOST"),
+		EmailPort:     helpers.GetEnvVar("GOAPI_EMAIL_PORT"),
+		EmailFrom:     helpers.GetEnvVar("GOAPI_EMAIL_FROM"),
+		EmailLogin:    helpers.GetEnvVar("GOAPI_EMAIL_LOGIN"),
+		EmailPassword: helpers.GetEnvVar("GOAPI_EMAIL_PASSWORD"),
+	})
+}
 
-	r := mux.NewRouter()
+func main() {
+	mainRouter := mux.NewRouter()
+	mainRouter.Use(middleware.CorsMiddleware())
+	mainRouter.Use(middleware.ContentTypeMiddleware())
+	mainRouter.HandleFunc("/login", handlers.LoginHandlerFactory(db, signingKey)).Methods("POST", "OPTIONS")
+	mainRouter.HandleFunc("/forgot", handlers.NewForgotPwHandler(db, emailSender)).Methods("POST")
+	mainRouter.HandleFunc("/post", handlers.GetPostsHandlerFactory(db)).Methods("GET", "OPTIONS")
 
-	r.Use(middleware.CorsMiddleware())
-	r.Use(middleware.ContentTypeMiddleware())
-
-	r.HandleFunc("/login", env.LoginHandler).Methods("POST", "OPTIONS")
+	userRouter := mainRouter.PathPrefix("/user").Subrouter()
+	userRouter.Use(middleware.AuthRequiredMiddleware(signingKey))
+	userRouter.HandleFunc("/me", handlers.GetMeHandlerFactory(db)).Methods("GET", "OPTIONS")
 
 	srv := &http.Server{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
-		Handler:      r,
+		Handler:      mainRouter,
 		Addr:         "localhost:8888",
+		// todo TLS
 	}
 
 	log.Fatal(srv.ListenAndServe())
