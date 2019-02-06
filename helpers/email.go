@@ -15,8 +15,13 @@ var (
 
 func init() {
 	var err error
-	if tmpl, err = template.ParseGlob("../templates/*.tmpl"); err != nil {
-		log.Fatal("Unable to load template files")
+
+	if tmpl, err = template.ParseGlob("templates/*.tmpl"); err != nil {
+		if tmpl, err = template.ParseGlob("../templates/*.tmpl"); err != nil {
+			if tmpl, err = template.ParseGlob("../../templates/*.tmpl"); err != nil {
+				log.Fatalf("Unable to load template files: %s", err)
+			}
+		}
 	}
 }
 

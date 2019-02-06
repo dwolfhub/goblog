@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetMeNoToken(t *testing.T) {
-	mockUserDataStore := &mockUserDataStore{}
+	mockUserDataStore := &models.MockUserDataStore{}
 
 	rr := httptest.NewRecorder()
 
@@ -44,8 +44,8 @@ func TestGetMeReturnsUserData(t *testing.T) {
 		Updated:  "2019-01-01 00:00:00",
 	}
 
-	mockUserDataStore := &mockUserDataStore{
-		user: user,
+	mockUserDataStore := &models.MockUserDataStore{
+		User: user,
 	}
 
 	ss := helpers.GenerateSignedString(user.Username, signingKey)

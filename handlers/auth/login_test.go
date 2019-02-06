@@ -1,12 +1,14 @@
-package handlers_test
+package auth_test
 
 import (
 	"encoding/json"
 	"errors"
-	"goapi/handlers"
+	"goapi/handlers/auth"
 	"goapi/models"
 	"net/http"
 	"testing"
+
+	"goapi/handlers"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -22,31 +24,31 @@ func TestLoginValidation(t *testing.T) {
 		{json: `{"username":null,"password":null}`},
 	}
 
-	mockUserDataStore := &mockUserDataStore{}
+	mockUserDataStore := &models.MockUserDataStore{}
 
-	handler := handlers.LoginHandlerFactory(mockUserDataStore, "signingkey")
+	handler := auth.LoginHandlerFactory(mockUserDataStore, "signingkey")
 
 	for _, tt := range tests {
-		if rr := testHttpRequest(tt.json, handler); rr.Code != http.StatusBadRequest {
+		if rr := handlers.TestHandler(tt.json, handler); rr.Code != http.StatusBadRequest {
 			t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusBadRequest)
 		}
 	}
 }
 
 func TestLoginInvalidUsername(t *testing.T) {
-	mockUserDataStore := &mockUserDataStore{}
-	mockUserDataStore.err = errors.New("User Not Found")
+	mockUserDataStore := &models.MockUserDataStore{}
+	mockUserDataStore.Err = errors.New("User Not Found")
 
-	handler := handlers.LoginHandlerFactory(mockUserDataStore, "signingkey")
+	handler := auth.LoginHandlerFactory(mockUserDataStore, "signingkey")
 
-	if rr := testHttpRequest(`{"username":"johndoe","password":"pass1234"}`, handler); rr.Code != http.StatusUnauthorized {
+	if rr := handlers.TestHandler(`{"username":"johndoe","password":"pass1234"}`, handler); rr.Code != http.StatusUnauthorized {
 		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusUnauthorized)
 	}
 }
 
 func TestLoginInvalidPassword(t *testing.T) {
-	mockUserDataStore := &mockUserDataStore{}
-	mockUserDataStore.user = models.User{
+	mockUserDataStore := &models.MockUserDataStore{}
+	mockUserDataStore.User = models.User{
 		ID:       100,
 		Username: "johndoe",
 		Password: "abcdefghij",
@@ -56,9 +58,9 @@ func TestLoginInvalidPassword(t *testing.T) {
 		Updated:  "2019-01-01 00:00:00",
 	}
 
-	handler := handlers.LoginHandlerFactory(mockUserDataStore, "signingkey")
+	handler := auth.LoginHandlerFactory(mockUserDataStore, "signingkey")
 
-	if rr := testHttpRequest(`{"username":"johndoe","password":"pass1234"}`, handler); rr.Code != http.StatusUnauthorized {
+	if rr := handlers.TestHandler(`{"username":"johndoe","password":"pass1234"}`, handler); rr.Code != http.StatusUnauthorized {
 		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusUnauthorized)
 	}
 }
@@ -66,8 +68,8 @@ func TestLoginInvalidPassword(t *testing.T) {
 func TestLoginValidCredentials(t *testing.T) {
 	encPassword, _ := bcrypt.GenerateFromPassword([]byte("pass1234"), 3)
 
-	mockUserDataStore := &mockUserDataStore{}
-	mockUserDataStore.user = models.User{
+	mockUserDataStore := &models.MockUserDataStore{}
+	mockUserDataStore.User = models.User{
 		ID:       100,
 		Username: "johndoe",
 		Password: string(encPassword),
@@ -77,9 +79,9 @@ func TestLoginValidCredentials(t *testing.T) {
 		Updated:  "2019-01-01 00:00:00",
 	}
 
-	handler := handlers.LoginHandlerFactory(mockUserDataStore, "signingkey")
+	handler := auth.LoginHandlerFactory(mockUserDataStore, "signingkey")
 
-	rr := testHttpRequest(`{"username":"johndoe","password":"pass1234"}`, handler)
+	rr := handlers.TestHandler(`{"username":"johndoe","password":"pass1234"}`, handler)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)

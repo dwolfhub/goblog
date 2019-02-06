@@ -1,9 +1,11 @@
-package handlers
+package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"goapi/helpers"
 	"goapi/models"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -28,7 +30,12 @@ func NewForgotPwHandler(userStore models.UserDataReader, emailSender helpers.Ema
 		user, err := userStore.GetUserByEmail(requestData.Email)
 
 		if err == nil {
-			emailSender.EmailSend([]string{user.Email}, "hello!", "hello!!!")
+			token, err := helpers.GenerateRandomToken()
+			if err != nil {
+				log.Fatalf("Unable to generate random token: %s", err)
+			}
+
+			emailSender.EmailSend([]string{user.Email}, "Reset Password Request", fmt.Sprintf("https://%s/reset?t=%s", r.Host, token))
 		}
 
 		w.WriteHeader(201)
